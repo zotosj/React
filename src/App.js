@@ -3,13 +3,15 @@ import './App.css';
 import React, { Component, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import axios from 'axios';
-
+import { modalContext } from './Modal'
 
 
 
 const CardList = (props) => (
   <div>
-    {props.profiles.map(profile => <Card key={profile.id} {...profile} />)}
+    {props.profiles.map(profile => <Card key={profile.id} {...profile} >
+
+    </Card>)}
   </div>
 );
 
@@ -45,127 +47,105 @@ const CardList = (props) => (
 // }
 // const m3 = new BMW('blue','m3')
 
-class Card extends React.Component {
-  render() {
-    return (
-      <div className="github-profile" style={{ width: '20rem', fontSize: '12px', background: '#FFFFFF', }}>
-        <img src={this.props.avatar_url} style={{ width: 60, height: 60, borderRadius: 60 / 2 }} />
-        <div className="info">
-          <div className="name">{this.props.name}</div>
-          <div className="company">{this.props.company}</div>
-        </div>
+const Card = (props) => {
+  return (
+    <div className="github-profile" style={{ width: '20rem', fontSize: '12px', background: '#FFFFFF', }}>
+
+      {props.children}
+      <img src={props.avatar_url} style={{ width: 60, height: 60, borderRadius: 60 / 2 }} />
+      <div className="info">
+        <div className="name">{props.name}</div>
+        <div className="company">{props.company}</div>
       </div>
-    );
-  }
+    </div>
+  );
 }
 
-class Form extends React.Component {
-  state = { userName: '' };
- 
-  handleSubmit = async (event) => {
+const Form = (props) => {
+
+  const [username, setUsername] = React.useState('')
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const resp = await axios.get(`https://api.github.com/users/${this.state.userName}`);
-    this.props.onSubmit(resp.data);
-    this.setState({ userName: '' });
+    props.onSubmit(resp.data);
+    setUsername('');
   };
-  render() {
-    return (
-      <form onSubmit={this.handleSubmit}>
-        <input
-          type="text"
-          // value={this.state.userName}
-          onChange={
-            event => {
-              // this.props.onChange(event.target.value)
-              this.setState({ userName: event.target.value }, () => {
-                console.log(this.state.userName);
-              })
 
-            }
-
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={username}
+        onChange={
+          event => {
+            props.onChange(event.target.value)
+            setUsername(event.target.value)
           }
-          placeholder="Enter username"
-          required
-        />
-        <button>Add card</button>
-      </form>
-    );
-  }
+
+        }
+        placeholder="Enter username"
+        required
+      />
+
+    </form>
+  );
 }
 
 
 
 
-class App extends React.Component {
 
-  searchGit = () => {
-    console.log("this time");
+const App = (props) => {
+
+  const [profiles, setProfiles] = React.useState([])
+
+  const [keyword, setKeyword] = React.useState('')
+
+  React.useEffect(() => {
+    fetchUserLog()
+
+  }, [])
+
+  React.useEffect(() => {
+    console.log(keyword, 'effect')
+
+  }, [keyword])
+
+  const fetchUserLog = async () => {
+    const resp = await axios.get("https://api.github.com/users")
+
+    const users = []
+
+    for (let i = 0; i < resp.data.length; i++) {
+
+      const element = resp.data[i];
+      const dataResponse = await axios.get(`https://api.github.com/users/${element.login}`)
+
+
+
+      users.push(dataResponse.data);
+    }
+
+
+
+
+
+
+    setProfiles(users);
+
   }
 
 
-  fetchUserLog = () => {
-    axios.get("https://api.github.com/users")
-      .then(
-        (response) => {
+  return (
+    <div>
+      <div className="header">{props.title}</div>
+      <Form onSubmit={fetchUserLog}
+        onChange={(value) => {setKeyword(value) }}
+      />
 
-
-          response.data.forEach(element => {
-
-
-            axios.get(`https://api.github.com/users/${element.login}`)
-              .then(
-                (dataresponse) => {
-                  this.state.profiles.push(dataresponse.data);
-
-                  this.setState(prevState => ({
-                    profiles: this.state.profiles,
-                  }));
-                  console.log(this.state.profiles.data);
-                }
-              )
-          });
-
-
-
-
-        }
-
-      )
-
-  }
-
-
-
-  state = {
-    profiles: [],
-    keyword: ''
-  };
-
-
-
-  addNewProfile = (profileData) => {
-    this.setState(prevState => ({
-      profiles: [],
-    }));
-  };
-  render() {
-    return (
-      <div>
-        <div className="header">{this.props.title}</div>
-        <Form onSubmit={this.fetchUserLog} 
-        // onChange={(value) => { this.setState({ keyword: value }) }} 
-        />
-
-        <CardList profiles={this.state.profiles.filter(profile => {console.log(profile); return this.state.keyword ? profile.name &&profile.name.toLowerCase().includes(this.state.keyword) : true})} />
-      </div>
-    );
-  }
-
-
-  componentWillMount() {
-    console.log({ message: "This is an updated message" });
-    this.fetchUserLog();
-  }
+      <CardList profiles={profiles.filter(profile => { console.log(profile); return keyword ? profile.name && profile.name.toLowerCase().includes(keyword) : true })} />
+    </div>
+  );
 
 }
 
